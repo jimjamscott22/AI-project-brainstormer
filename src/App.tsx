@@ -18,10 +18,10 @@ function App() {
       console.error('Brainstorming failed:', error);
       // Fallback if API fails
       setResult({
-        understanding: "I had trouble connecting to the local LLM, but here are some general ideas based on common best practices.",
+        understanding: "I had trouble connecting to the local LLM, but here are some solo-friendly ideas based on common best practices.",
         ideas: [
-          { id: 'f1', title: 'Agile Workflow Optimization', description: 'Streamline team sprints and feedback loops.', priority: 'High', effort: 'Medium', impact: 'High' },
-          { id: 'f2', title: 'Customer Feedback Loop', description: 'Implement a direct channel for user insights.', priority: 'Medium', effort: 'Low', impact: 'High' }
+          { id: 'f1', title: 'Personal Habit Tracker', description: 'Build a minimal tracker that fits a weekend scope and highlights one core habit.', priority: 'High', effort: 'Medium', impact: 'High' },
+          { id: 'f2', title: 'Single-Feature Demo', description: 'Create one polished feature around an interest area to practice your stack.', priority: 'Medium', effort: 'Low', impact: 'High' }
         ]
       });
     } finally {
@@ -41,13 +41,13 @@ function App() {
         <header className="text-center mb-16">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-xs font-bold text-brand-primary uppercase tracking-widest mb-4">
             <Sparkles size={14} />
-            AI-Powered Planning
+            Personal Idea Generator
           </div>
           <h1 className="text-5xl md:text-6xl font-black text-white mb-6 tracking-tight">
-            Project <span className="bg-clip-text text-transparent bg-gradient-to-r from-brand-primary to-brand-secondary">Brainstormer</span>
+            Personal <span className="bg-clip-text text-transparent bg-gradient-to-r from-brand-primary to-brand-secondary">Project Ideas</span>
           </h1>
           <p className="text-slate-400 text-lg max-w-2xl mx-auto">
-            Generate contextual, high-impact ideas for your team's next big move using local LLM intelligence.
+            Turn your interests, skills, and time budget into buildable project ideas with local LLM guidance.
           </p>
         </header>
 
@@ -57,9 +57,9 @@ function App() {
             
             <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
               {[
-                { icon: Brain, title: "Context Aware", desc: "No generic templates. Every idea is tailored to your product." },
-                { icon: Sparkles, title: "Local Inference", desc: "Fast, private brainstorming powered by local LLM logic." },
-                { icon: Sparkles, title: "Actionable", desc: "Priority, effort, and impact metrics for every suggestion." }
+                { icon: Brain, title: "Solo-Sized Scope", desc: "Ideas sized to your time and energy, not a whole team." },
+                { icon: Sparkles, title: "Skill-Aligned", desc: "Mixes what you know with what you want to learn next." },
+                { icon: Sparkles, title: "Constraint Smart", desc: "Respects your tools, budget, and personal schedule." }
               ].map((feature, i) => (
                 <div key={i} className="text-center p-4">
                   <div className="w-12 h-12 bg-slate-800 rounded-xl flex items-center justify-center mx-auto mb-4 text-brand-primary border border-slate-700">
@@ -81,7 +81,7 @@ function App() {
       </main>
 
       <footer className="relative z-10 border-t border-slate-800 py-8 mt-12 text-center text-slate-500 text-sm">
-        <p>© 2026 AI Project Brainstormer • Private & Local</p>
+        <p>© 2026 Personal Project Idea Generator • Private & Local</p>
       </footer>
     </div>
   );

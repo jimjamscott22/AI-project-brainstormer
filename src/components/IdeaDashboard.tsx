@@ -82,7 +82,7 @@ const IdeaDashboard: React.FC<IdeaDashboardProps> = ({ understanding, ideas, onR
       >
         <div className="flex items-center gap-3 mb-4 text-brand-primary font-bold tracking-tight">
           <ShieldCheck size={24} />
-          <span>CLAUDE'S UNDERSTANDING</span>
+          <span>YOUR BRIEF, REFLECTED</span>
         </div>
         <p className="text-xl text-slate-200 font-medium leading-relaxed italic">
           "{understanding}"
@@ -92,8 +92,8 @@ const IdeaDashboard: React.FC<IdeaDashboardProps> = ({ understanding, ideas, onR
       <div>
         <div className="flex items-center justify-between mb-8">
           <h2 className="text-3xl font-bold text-white flex items-center gap-3">
-            Generated Ideas 
-            <span className="text-sm font-normal text-slate-500 bg-slate-800 px-3 py-1 rounded-full">6 Contextual Suggestions</span>
+            Project Ideas 
+            <span className="text-sm font-normal text-slate-500 bg-slate-800 px-3 py-1 rounded-full">6 Buildable Concepts</span>
           </h2>
           <button 
             onClick={onReset}
