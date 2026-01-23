@@ -1,3 +1,6 @@
+import type { LLMConfig } from './llmProviderService';
+import { generateCompletion } from './llmProviderService';
+
 export interface BrainstormContext {
   interests: string;
   skills: string;
@@ -20,13 +23,94 @@ export interface BrainstormResult {
   ideas: Idea[];
 }
 
-export const generateIdeas = async (context: BrainstormContext): Promise<BrainstormResult> => {
-  // Simulate local LLM processing delay
-  await new Promise(resolve => setTimeout(resolve, 2000));
+const SYSTEM_PROMPT = `You are a creative project brainstorming assistant. Generate solo-friendly project ideas tailored to the user's interests, skills, time budget, and constraints.
 
-  // In a real scenario, this would call a local LLM API like Ollama or use WebLLM
-  // For this exercise, we'll use a sophisticated template generator that proves contextuality
-  
+Your response must be valid JSON with this exact structure:
+{
+  "understanding": "A brief sentence restating what the user wants",
+  "ideas": [
+    {
+      "id": "1",
+      "title": "Project Title",
+      "description": "2-3 sentence description of the project",
+      "priority": "High" | "Medium" | "Low",
+      "effort": "High" | "Medium" | "Low",
+      "impact": "High" | "Medium" | "Low"
+    }
+  ]
+}
+
+Generate exactly 6 project ideas. Make them specific, actionable, and scoped to fit the user's time budget. Vary the priority, effort, and impact levels across ideas.`;
+
+export const generateIdeas = async (
+  context: BrainstormContext,
+  llmConfig?: LLMConfig
+): Promise<BrainstormResult> => {
+  // If LLM is configured, try to use it
+  if (llmConfig?.provider && llmConfig?.model) {
+    try {
+      const goalLabels = {
+        learn: 'learn a new skill',
+        portfolio: 'ship a portfolio piece',
+        automation: 'automate a personal workflow',
+        income: 'explore a side-income idea',
+        community: 'contribute to a community need'
+      };
+
+      const userPrompt = `Generate project ideas for someone who:
+- Wants to: ${goalLabels[context.goal]}
+- Interests: ${context.interests}
+- Skills/Stack: ${context.skills}
+- Time Budget: ${context.timeBudget}
+- Constraints: ${context.constraints}
+
+Respond with valid JSON only, no markdown or extra text.`;
+
+      const response = await generateCompletion(llmConfig, userPrompt, SYSTEM_PROMPT);
+      
+      // Try to parse JSON from response
+      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        
+        // Validate and normalize the response
+        if (parsed.understanding && Array.isArray(parsed.ideas)) {
+          return {
+            understanding: parsed.understanding,
+            ideas: parsed.ideas.map((idea: any, index: number) => ({
+              id: idea.id || index.toString(),
+              title: idea.title || 'Untitled Idea',
+              description: idea.description || '',
+              priority: validateLevel(idea.priority),
+              effort: validateLevel(idea.effort),
+              impact: validateLevel(idea.impact),
+            })),
+          };
+        }
+      }
+      
+      throw new Error('Invalid response format from LLM');
+    } catch (error) {
+      console.warn('LLM generation failed, falling back to templates:', error);
+      // Fall through to template generator
+    }
+  }
+
+  // Template-based fallback (or default when no LLM is configured)
+  return generateTemplateIdeas(context);
+};
+
+function validateLevel(value: unknown): 'High' | 'Medium' | 'Low' {
+  if (value === 'High' || value === 'Medium' || value === 'Low') {
+    return value;
+  }
+  return 'Medium';
+}
+
+async function generateTemplateIdeas(context: BrainstormContext): Promise<BrainstormResult> {
+  // Simulate processing delay
+  await new Promise(resolve => setTimeout(resolve, 1500));
+
   const goalLabels = {
     learn: 'learn a new skill',
     portfolio: 'ship a portfolio piece',
@@ -93,4 +177,4 @@ export const generateIdeas = async (context: BrainstormContext): Promise<Brainst
       impact: index % 3 === 0 ? 'High' : 'Medium'
     }))
   };
-};
+}
