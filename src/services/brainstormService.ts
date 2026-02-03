@@ -18,6 +18,20 @@ export interface Idea {
   impact: 'High' | 'Medium' | 'Low';
 }
 
+export interface IdeaElaboration {
+  overview: string;
+  coreFeatures: string[];
+  dataFlow: string;
+  milestones: string[];
+  risks: string[];
+  stretchGoals: string[];
+}
+
+export interface IdeaElaborationResult {
+  elaboration: IdeaElaboration;
+  source: 'llm' | 'template';
+}
+
 export interface BrainstormResult {
   understanding: string;
   ideas: Idea[];
@@ -41,6 +55,20 @@ Your response must be valid JSON with this exact structure:
 }
 
 Generate exactly 6 project ideas. Make them specific, actionable, and scoped to fit the user's time budget. Vary the priority, effort, and impact levels across ideas.`;
+
+const ELABORATION_SYSTEM_PROMPT = `You are a senior product architect. Elaborate a solo-friendly project into a concise build structure.
+
+Return valid JSON only with this exact structure:
+{
+  "overview": "2-3 sentences describing the project scope and target user",
+  "coreFeatures": ["Feature 1", "Feature 2", "Feature 3", "Feature 4"],
+  "dataFlow": "Short description of data inputs/outputs and how they move",
+  "milestones": ["Milestone 1", "Milestone 2", "Milestone 3"],
+  "risks": ["Risk 1", "Risk 2"],
+  "stretchGoals": ["Stretch 1", "Stretch 2"]
+}
+
+Keep everything compact and actionable for a solo builder. Do not include markdown or extra text.`;
 
 export const generateIdeas = async (
   context: BrainstormContext,
@@ -71,13 +99,13 @@ Respond with valid JSON only, no markdown or extra text.`;
       // Try to parse JSON from response
       const jsonMatch = response.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
-        
+        const parsed: unknown = JSON.parse(jsonMatch[0]);
+
         // Validate and normalize the response
-        if (parsed.understanding && Array.isArray(parsed.ideas)) {
+        if (isBrainstormPayload(parsed)) {
           return {
             understanding: parsed.understanding,
-            ideas: parsed.ideas.map((idea: any, index: number) => ({
+            ideas: parsed.ideas.map((idea, index) => ({
               id: idea.id || index.toString(),
               title: idea.title || 'Untitled Idea',
               description: idea.description || '',
@@ -99,6 +127,124 @@ Respond with valid JSON only, no markdown or extra text.`;
   // Template-based fallback (or default when no LLM is configured)
   return generateTemplateIdeas(context);
 };
+
+export const generateIdeaElaboration = async (
+  context: BrainstormContext,
+  idea: Idea,
+  llmConfig?: LLMConfig
+): Promise<IdeaElaborationResult> => {
+  if (llmConfig?.provider && llmConfig?.model) {
+    try {
+      const userPrompt = `Elaborate the following project for a solo builder.
+
+Project Title: ${idea.title}
+Short Description: ${idea.description}
+Priority: ${idea.priority}
+Effort: ${idea.effort}
+Impact: ${idea.impact}
+
+User context:
+- Interests: ${context.interests}
+- Skills/Stack: ${context.skills}
+- Time Budget: ${context.timeBudget}
+- Goal: ${context.goal}
+- Constraints: ${context.constraints}
+
+Return valid JSON only.`;
+
+      const response = await generateCompletion(llmConfig, userPrompt, ELABORATION_SYSTEM_PROMPT);
+      const jsonMatch = response.match(/\{[\s\S]*\}/);
+
+      if (jsonMatch) {
+        const parsed: unknown = JSON.parse(jsonMatch[0]);
+        const normalized = normalizeElaboration(parsed);
+        if (normalized) {
+          return { elaboration: normalized, source: 'llm' };
+        }
+      }
+
+      throw new Error('Invalid elaboration response format from LLM');
+    } catch (error) {
+      console.warn('LLM elaboration failed, falling back to templates:', error);
+    }
+  }
+
+  return {
+    elaboration: createTemplateElaboration(context, idea),
+    source: 'template'
+  };
+};
+
+function normalizeElaboration(value: unknown): IdeaElaboration | null {
+  if (!value || typeof value !== 'object') return null;
+
+  const payload = value as {
+    overview?: unknown;
+    coreFeatures?: unknown;
+    dataFlow?: unknown;
+    milestones?: unknown;
+    risks?: unknown;
+    stretchGoals?: unknown;
+  };
+
+  return {
+    overview: typeof payload.overview === 'string' ? payload.overview : '',
+    coreFeatures: normalizeStringArray(payload.coreFeatures, 4),
+    dataFlow: typeof payload.dataFlow === 'string' ? payload.dataFlow : '',
+    milestones: normalizeStringArray(payload.milestones, 3),
+    risks: normalizeStringArray(payload.risks, 2),
+    stretchGoals: normalizeStringArray(payload.stretchGoals, 2)
+  };
+}
+
+function normalizeStringArray(value: unknown, minItems: number): string[] {
+  if (Array.isArray(value)) {
+    const filtered = value.filter((item: unknown) => typeof item === 'string' && item.trim().length > 0);
+    if (filtered.length >= minItems) return filtered;
+  }
+  return [];
+}
+
+function isBrainstormPayload(value: unknown): value is { understanding: string; ideas: LlmIdea[] } {
+  if (!value || typeof value !== 'object') return false;
+  const payload = value as { understanding?: unknown; ideas?: unknown };
+  return typeof payload.understanding === 'string' && Array.isArray(payload.ideas);
+}
+
+interface LlmIdea {
+  id?: string;
+  title?: string;
+  description?: string;
+  priority?: unknown;
+  effort?: unknown;
+  impact?: unknown;
+}
+
+function createTemplateElaboration(context: BrainstormContext, idea: Idea): IdeaElaboration {
+  return {
+    overview: `${idea.title} is a focused project for ${context.timeBudget} that leans on ${context.skills} to deliver a clear outcome for ${context.interests}. It keeps scope tight while still highlighting your main goal: ${context.goal}.`,
+    coreFeatures: [
+      'Simple onboarding or setup flow for first-time users',
+      'Primary workflow that delivers the project value fast',
+      'Progress or status view to reinforce momentum',
+      'Polish pass: empty states, helpful copy, and defaults'
+    ],
+    dataFlow: `User inputs are captured, validated, and stored locally. Outputs are summarized back to the user with minimal state and a clear next action.`,
+    milestones: [
+      'Define the core user journey and sketch a basic UI',
+      'Implement the primary flow end-to-end with minimal styling',
+      'Add refinement: validation, empty states, and a short demo'
+    ],
+    risks: [
+      'Scope creep beyond the time budget',
+      'Over-engineering data storage or integrations'
+    ],
+    stretchGoals: [
+      'Add light personalization or theming',
+      'Ship a small shareable demo or landing page'
+    ]
+  };
+}
 
 function validateLevel(value: unknown): 'High' | 'Medium' | 'Low' {
   if (value === 'High' || value === 'Medium' || value === 'Low') {

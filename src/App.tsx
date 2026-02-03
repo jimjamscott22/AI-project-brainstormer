@@ -4,13 +4,21 @@ import BrainstormForm from './components/BrainstormForm';
 import IdeaDashboard from './components/IdeaDashboard';
 import LLMSidebar from './components/LLMSidebar';
 import ToastContainer, { type Toast } from './components/Toast';
-import type { BrainstormContext, BrainstormResult } from './services/brainstormService';
+import type { BrainstormContext, BrainstormResult, Idea, IdeaElaboration } from './services/brainstormService';
 import type { LLMConfig } from './services/llmProviderService';
-import { generateIdeas } from './services/brainstormService';
+import { generateIdeas, generateIdeaElaboration } from './services/brainstormService';
+import { exportToJSON, exportToMarkdown } from './services/exportService';
+import { saveIdeaToCloud } from './services/ideaPersistenceService';
+import { isSupabaseConfigured } from './services/supabaseClient';
 
 function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<BrainstormResult | null>(null);
+  const [selectedIdea, setSelectedIdea] = useState<Idea | null>(null);
+  const [elaboration, setElaboration] = useState<IdeaElaboration | null>(null);
+  const [isElaborating, setIsElaborating] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [lastContext, setLastContext] = useState<BrainstormContext | null>(null);
   const [llmConfig, setLlmConfig] = useState<LLMConfig>({
     provider: null,
     model: null,
@@ -31,6 +39,9 @@ function App() {
 
   const handleBrainstorm = async (context: BrainstormContext) => {
     setIsLoading(true);
+    setSelectedIdea(null);
+    setElaboration(null);
+    setLastContext(context);
     try {
       const data = await generateIdeas(context, llmConfig);
       setResult(data);
@@ -52,6 +63,90 @@ function App() {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleSelectIdea = async (idea: Idea) => {
+    if (!lastContext) {
+      addToast('error', 'Please generate ideas first so I can use your context.', 4000);
+      return;
+    }
+
+    setSelectedIdea(idea);
+    setIsElaborating(true);
+    setElaboration(null);
+
+    if (!llmConfig.provider || !llmConfig.model) {
+      addToast('info', 'No LLM selected — using template elaboration.', 4000);
+    }
+
+    try {
+      const result = await generateIdeaElaboration(lastContext, idea, llmConfig);
+      setElaboration(result.elaboration);
+      if (result.source === 'llm') {
+        addToast('success', 'Generated a structured project outline.', 3000);
+      } else {
+        addToast('info', 'Generated a template outline. Select an LLM for richer detail.', 5000);
+      }
+    } catch (error) {
+      console.error('Elaboration failed:', error);
+      addToast('error', 'Failed to elaborate on this idea. Please try again.', 5000);
+    } finally {
+      setIsElaborating(false);
+    }
+  };
+
+  const handleExportJSON = () => {
+    if (!selectedIdea || !elaboration) {
+      addToast('error', 'Please select an idea and wait for elaboration first.', 4000);
+      return;
+    }
+    try {
+      exportToJSON(selectedIdea, elaboration, lastContext ?? undefined);
+      addToast('success', 'Exported idea as JSON file.', 3000);
+    } catch (error) {
+      console.error('Export failed:', error);
+      addToast('error', 'Failed to export idea.', 4000);
+    }
+  };
+
+  const handleExportMarkdown = () => {
+    if (!selectedIdea || !elaboration) {
+      addToast('error', 'Please select an idea and wait for elaboration first.', 4000);
+      return;
+    }
+    try {
+      exportToMarkdown(selectedIdea, elaboration, lastContext ?? undefined);
+      addToast('success', 'Exported idea as Markdown file.', 3000);
+    } catch (error) {
+      console.error('Export failed:', error);
+      addToast('error', 'Failed to export idea.', 4000);
+    }
+  };
+
+  const handleSaveToCloud = async () => {
+    if (!selectedIdea || !elaboration) {
+      addToast('error', 'Please select an idea and wait for elaboration first.', 4000);
+      return;
+    }
+    if (!isSupabaseConfigured()) {
+      addToast('error', 'Supabase is not configured. Check your environment variables.', 5000);
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const result = await saveIdeaToCloud(selectedIdea, elaboration, lastContext ?? undefined);
+      if (result.success) {
+        addToast('success', 'Idea saved to cloud successfully!', 3000);
+      } else {
+        addToast('error', result.error || 'Failed to save idea to cloud.', 5000);
+      }
+    } catch (error) {
+      console.error('Save to cloud failed:', error);
+      addToast('error', 'An unexpected error occurred while saving.', 5000);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -126,7 +221,20 @@ function App() {
             <IdeaDashboard 
               understanding={result.understanding} 
               ideas={result.ideas} 
-              onReset={() => setResult(null)} 
+              selectedIdea={selectedIdea}
+              elaboration={elaboration}
+              isElaborating={isElaborating}
+              onSelectIdea={handleSelectIdea}
+              onExportJSON={handleExportJSON}
+              onExportMarkdown={handleExportMarkdown}
+              onSaveToCloud={handleSaveToCloud}
+              isSaving={isSaving}
+              isSupabaseConfigured={isSupabaseConfigured()}
+              onReset={() => {
+                setResult(null);
+                setSelectedIdea(null);
+                setElaboration(null);
+              }}
             />
           )}
         </div>

@@ -60,15 +60,9 @@ export async function fetchOllamaModels(): Promise<LLMProvider> {
       throw new Error('Ollama not responding');
     }
     
-    const data = await response.json();
-    const models: LLMModel[] = (data.models || []).map((m: any) => ({
-      id: m.name,
-      name: m.name.split(':')[0],
-      size: formatBytes(m.size),
-      quantization: m.name.includes(':') ? m.name.split(':')[1] : 'latest',
-      modified: m.modified_at,
-    }));
-    
+    const data: unknown = await response.json();
+    const models: LLMModel[] = normalizeOllamaModels(data);
+
     return {
       type: 'ollama',
       name: 'Ollama',
@@ -103,14 +97,9 @@ export async function fetchLMStudioModels(): Promise<LLMProvider> {
       throw new Error('LM Studio not responding');
     }
     
-    const data = await response.json();
-    const models: LLMModel[] = (data.data || []).map((m: any) => ({
-      id: m.id,
-      name: m.id.split('/').pop() || m.id,
-      size: undefined,
-      quantization: undefined,
-    }));
-    
+    const data: unknown = await response.json();
+    const models: LLMModel[] = normalizeLMStudioModels(data);
+
     return {
       type: 'lmstudio',
       name: 'LM Studio',
@@ -270,6 +259,61 @@ export async function generateCompletion(
   }
   
   throw new Error('Unknown provider');
+}
+
+function normalizeOllamaModels(value: unknown): LLMModel[] {
+  if (!value || typeof value !== 'object') return [];
+  const payload = value as { models?: unknown };
+  if (!Array.isArray(payload.models)) return [];
+
+  const models: LLMModel[] = [];
+
+  for (const item of payload.models) {
+    if (!item || typeof item !== 'object') continue;
+    const model = item as {
+      name?: unknown;
+      size?: unknown;
+      modified_at?: unknown;
+    };
+
+    if (typeof model.name !== 'string') continue;
+
+    const nameParts = model.name.split(':');
+    const size = typeof model.size === 'number' ? model.size : 0;
+
+    models.push({
+      id: model.name,
+      name: nameParts[0],
+      size: formatBytes(size),
+      quantization: nameParts.length > 1 ? nameParts[1] : 'latest',
+      modified: typeof model.modified_at === 'string' ? model.modified_at : undefined,
+    });
+  }
+
+  return models;
+}
+
+function normalizeLMStudioModels(value: unknown): LLMModel[] {
+  if (!value || typeof value !== 'object') return [];
+  const payload = value as { data?: unknown };
+  if (!Array.isArray(payload.data)) return [];
+
+  const models: LLMModel[] = [];
+
+  for (const item of payload.data) {
+    if (!item || typeof item !== 'object') continue;
+    const model = item as { id?: unknown };
+    if (typeof model.id !== 'string') continue;
+
+    models.push({
+      id: model.id,
+      name: model.id.split('/').pop() || model.id,
+      size: undefined,
+      quantization: undefined,
+    });
+  }
+
+  return models;
 }
 
 function formatBytes(bytes: number): string {
