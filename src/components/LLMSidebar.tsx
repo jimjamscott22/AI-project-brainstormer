@@ -58,7 +58,7 @@ const LLMSidebar: React.FC<LLMSidebarProps> = ({ config, onConfigChange, isExpan
   }, [refreshProviders]);
 
   const handleSelectModel = (providerType: ProviderType, modelId: string) => {
-    onConfigChange({ provider: providerType, model: modelId });
+    onConfigChange({ ...config, provider: providerType, model: modelId });
   };
 
   const onlineCount = providers.filter(p => p.isOnline).length;
