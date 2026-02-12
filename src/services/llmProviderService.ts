@@ -28,13 +28,14 @@ export interface LLMConfig {
 // In production, use environment variables or fallback to localhost
 const getProviderEndpoints = (): Record<ProviderType, string> => {
   if (import.meta.env.DEV) {
-    // Development mode: use dev server proxy
+    // Development mode: use relative paths so the Vite dev server proxy handles them
+    // regardless of which port the dev server is running on
     return {
-      ollama: 'http://localhost:5173/api/ollama',
-      lmstudio: 'http://localhost:5173/api/llm-studio',
+      ollama: '/api/ollama',
+      lmstudio: '/api/llm-studio',
     };
   }
-  
+
   // Production mode: use environment variables or defaults
   return {
     ollama: import.meta.env.VITE_OLLAMA_ENDPOINT || 'http://localhost:11434',
