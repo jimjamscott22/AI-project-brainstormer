@@ -8,8 +8,7 @@ import type { BrainstormContext, BrainstormResult, Idea, IdeaElaboration } from 
 import type { LLMConfig } from './services/llmProviderService';
 import { generateIdeas, generateIdeaElaboration } from './services/brainstormService';
 import { exportToJSON, exportToMarkdown } from './services/exportService';
-import { saveIdeaToCloud } from './services/ideaPersistenceService';
-import { isSupabaseConfigured } from './services/supabaseClient';
+import { saveIdea, isStorageConfigured, getStorageLabel } from './services/persistenceService';
 
 function App() {
   const [isLoading, setIsLoading] = useState(false);
@@ -124,26 +123,26 @@ function App() {
     }
   };
 
-  const handleSaveToCloud = async () => {
+  const handleSave = async () => {
     if (!selectedIdea || !elaboration) {
       addToast('error', 'Please select an idea and wait for elaboration first.', 4000);
       return;
     }
-    if (!isSupabaseConfigured()) {
-      addToast('error', 'Supabase is not configured. Check your environment variables.', 5000);
+    if (!isStorageConfigured()) {
+      addToast('error', 'Storage backend is not configured. Check your environment variables.', 5000);
       return;
     }
 
     setIsSaving(true);
     try {
-      const result = await saveIdeaToCloud(selectedIdea, elaboration, lastContext ?? undefined);
+      const result = await saveIdea(selectedIdea, elaboration, lastContext ?? undefined);
       if (result.success) {
-        addToast('success', 'Idea saved to cloud successfully!', 3000);
+        addToast('success', `Idea saved to ${getStorageLabel().toLowerCase()} successfully!`, 3000);
       } else {
-        addToast('error', result.error || 'Failed to save idea to cloud.', 5000);
+        addToast('error', result.error || 'Failed to save idea.', 5000);
       }
     } catch (error) {
-      console.error('Save to cloud failed:', error);
+      console.error('Save failed:', error);
       addToast('error', 'An unexpected error occurred while saving.', 5000);
     } finally {
       setIsSaving(false);
@@ -227,9 +226,10 @@ function App() {
               onSelectIdea={handleSelectIdea}
               onExportJSON={handleExportJSON}
               onExportMarkdown={handleExportMarkdown}
-              onSaveToCloud={handleSaveToCloud}
+              onSave={handleSave}
               isSaving={isSaving}
-              isSupabaseConfigured={isSupabaseConfigured()}
+              isStorageConfigured={isStorageConfigured()}
+              storageLabel={getStorageLabel()}
               onReset={() => {
                 setResult(null);
                 setSelectedIdea(null);

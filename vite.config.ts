@@ -20,6 +20,10 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/ollama/, ''),
       },
+      '/api/ideas': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
     },
   },
 })

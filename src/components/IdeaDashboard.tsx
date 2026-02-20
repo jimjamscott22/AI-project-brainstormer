@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import type { Idea, IdeaElaboration } from '../services/brainstormService';
-import { Zap, TrendingUp, ShieldCheck, Lightbulb, Download, FileText, Cloud } from 'lucide-react';
+import { Zap, TrendingUp, ShieldCheck, Lightbulb, Download, FileText, Database } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -93,9 +93,10 @@ interface IdeaDashboardProps {
   onReset: () => void;
   onExportJSON?: () => void;
   onExportMarkdown?: () => void;
-  onSaveToCloud?: () => void;
+  onSave?: () => void;
   isSaving?: boolean;
-  isSupabaseConfigured?: boolean;
+  isStorageConfigured?: boolean;
+  storageLabel?: string;
 }
 
 const IdeaDashboard: React.FC<IdeaDashboardProps> = ({
@@ -108,9 +109,10 @@ const IdeaDashboard: React.FC<IdeaDashboardProps> = ({
   onReset,
   onExportJSON,
   onExportMarkdown,
-  onSaveToCloud,
+  onSave,
   isSaving = false,
-  isSupabaseConfigured = false,
+  isStorageConfigured = false,
+  storageLabel = 'Database',
 }) => {
   return (
     <div className="max-w-6xl mx-auto space-y-12 pb-20">
@@ -233,9 +235,9 @@ const IdeaDashboard: React.FC<IdeaDashboardProps> = ({
                   <FileText size={16} />
                   Export Markdown
                 </button>
-                {isSupabaseConfigured && (
+                {isStorageConfigured && (
                   <button
-                    onClick={onSaveToCloud}
+                    onClick={onSave}
                     disabled={isSaving}
                     className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-brand-primary/80 hover:bg-brand-primary border border-brand-primary/50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
@@ -246,8 +248,8 @@ const IdeaDashboard: React.FC<IdeaDashboardProps> = ({
                       </>
                     ) : (
                       <>
-                        <Cloud size={16} />
-                        Save to Cloud
+                        <Database size={16} />
+                        Save to {storageLabel}
                       </>
                     )}
                   </button>
