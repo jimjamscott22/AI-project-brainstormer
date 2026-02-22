@@ -211,7 +211,7 @@ function App() {
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
-                <Sparkles size={14} />
+                <Sparkles size={16} />
                 Generate
               </button>
               <button
@@ -224,7 +224,7 @@ function App() {
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
-                <Database size={14} />
+                <Database size={16} />
                 Saved Ideas
               </button>
             </div>
