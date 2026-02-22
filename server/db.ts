@@ -1,4 +1,4 @@
-import mariadb from 'mariadb';
+import { createPool } from 'mariadb';
 import dotenv from 'dotenv';
 
 dotenv.config({ path: '../.env' });
@@ -9,12 +9,12 @@ const required = (key: string): string => {
   return val;
 };
 
-const pool = mariadb.createPool({
+const pool = createPool({
   host: process.env.MARIADB_HOST || 'localhost',
   port: parseInt(process.env.MARIADB_PORT || '3306', 10),
   user: required('MARIADB_USER'),
   password: required('MARIADB_PASSWORD'),
-  database: process.env.MARIADB_DATABASE || 'project_brainstormer',
+  database: process.env.MARIADB_DATABASE || 'ai_brainstormer',
   connectionLimit: 5,
 });
 

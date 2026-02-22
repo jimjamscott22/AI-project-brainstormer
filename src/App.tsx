@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Brain, Sparkles } from 'lucide-react';
+import { Brain, Sparkles, Database } from 'lucide-react';
 import BrainstormForm from './components/BrainstormForm';
 import IdeaDashboard from './components/IdeaDashboard';
+import SavedIdeasView from './components/SavedIdeasView';
 import LLMSidebar from './components/LLMSidebar';
 import ToastContainer, { type Toast } from './components/Toast';
 import type { BrainstormContext, BrainstormResult, Idea, IdeaElaboration } from './services/brainstormService';
@@ -9,6 +10,8 @@ import type { LLMConfig } from './services/llmProviderService';
 import { generateIdeas, generateIdeaElaboration } from './services/brainstormService';
 import { exportToJSON, exportToMarkdown } from './services/exportService';
 import { saveIdea, isStorageConfigured, getStorageLabel } from './services/persistenceService';
+
+type AppView = 'generate' | 'saved';
 
 function App() {
   const [isLoading, setIsLoading] = useState(false);
@@ -26,6 +29,7 @@ function App() {
   });
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const [activeView, setActiveView] = useState<AppView>('generate');
 
   const addToast = (type: Toast['type'], message: string, duration?: number) => {
     const id = Date.now().toString();
@@ -194,12 +198,44 @@ function App() {
                 No LLM selected — using template fallback
               </div>
             )}
+
+            {/* View Tabs */}
+            <div role="tablist" aria-label="Application views" className="flex items-center justify-center gap-1 mt-8 p-1 bg-slate-800/60 border border-slate-700/50 rounded-xl w-fit mx-auto">
+              <button
+                role="tab"
+                aria-selected={activeView === 'generate'}
+                onClick={() => setActiveView('generate')}
+                className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all ${
+                  activeView === 'generate'
+                    ? 'bg-brand-primary/20 text-brand-primary border border-brand-primary/30'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <Sparkles size={14} />
+                Generate
+              </button>
+              <button
+                role="tab"
+                aria-selected={activeView === 'saved'}
+                onClick={() => setActiveView('saved')}
+                className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all ${
+                  activeView === 'saved'
+                    ? 'bg-brand-primary/20 text-brand-primary border border-brand-primary/30'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <Database size={14} />
+                Saved Ideas
+              </button>
+            </div>
           </header>
 
-          {!result ? (
+          {activeView === 'saved' ? (
+            <SavedIdeasView onToast={addToast} />
+          ) : !result ? (
             <section className="animate-in fade-in slide-in-from-bottom-4 duration-700">
               <BrainstormForm onSubmit={handleBrainstorm} isLoading={isLoading} />
-              
+
               <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
                 {[
                   { icon: Brain, title: "Solo-Sized Scope", desc: "Ideas sized to your time and energy, not a whole team." },
@@ -217,9 +253,9 @@ function App() {
               </div>
             </section>
           ) : (
-            <IdeaDashboard 
-              understanding={result.understanding} 
-              ideas={result.ideas} 
+            <IdeaDashboard
+              understanding={result.understanding}
+              ideas={result.ideas}
               selectedIdea={selectedIdea}
               elaboration={elaboration}
               isElaborating={isElaborating}
