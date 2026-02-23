@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Lightbulb, Zap, TrendingUp, Trash2, ChevronDown, ChevronUp, RefreshCw, Database, Calendar } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import type { ProjectIdeaRow } from '../services/ideaPersistenceService';
+import type { ProjectIdeaRow } from '../services/persistenceService';
 import type { IdeaElaboration } from '../services/brainstormService';
 import { getSavedIdeas, deleteIdea } from '../services/persistenceService';
 

@@ -1,5 +1,5 @@
 import type { Idea, IdeaElaboration, BrainstormContext } from './brainstormService';
-import type { ProjectIdeaRow, SaveIdeaResult, GetIdeasResult } from './ideaPersistenceService';
+import type { ProjectIdeaRow, SaveIdeaResult, GetIdeasResult } from './persistenceService';
 
 const API_BASE = import.meta.env.VITE_MARIADB_API_URL || '/api';
 

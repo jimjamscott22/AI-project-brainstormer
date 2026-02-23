@@ -1,28 +1,39 @@
 import type { Idea, IdeaElaboration, BrainstormContext } from './brainstormService';
-import type { SaveIdeaResult, GetIdeasResult } from './ideaPersistenceService';
-import { saveIdeaToCloud, getSavedIdeas as getSupabaseIdeas, deleteIdeaFromCloud } from './ideaPersistenceService';
-import { isSupabaseConfigured } from './supabaseClient';
 import { saveIdeaToMariaDB, getSavedIdeasFromMariaDB, deleteIdeaFromMariaDB } from './mariadbPersistenceService';
 
-type StorageBackend = 'mariadb' | 'supabase';
+export interface ProjectIdeaRow {
+  id: string;
+  title: string;
+  description: string | null;
+  priority: 'High' | 'Medium' | 'Low' | null;
+  effort: 'High' | 'Medium' | 'Low' | null;
+  impact: 'High' | 'Medium' | 'Low' | null;
+  elaboration: IdeaElaboration | null;
+  context: BrainstormContext | null;
+  created_at: string;
+  updated_at: string;
+}
 
-function getBackend(): StorageBackend {
-  const env = import.meta.env.VITE_STORAGE_BACKEND;
-  if (env === 'mariadb' || env === 'supabase') return env;
-  // Default: use mariadb if configured, otherwise supabase
-  return 'mariadb';
+export interface SaveIdeaResult {
+  success: boolean;
+  data?: ProjectIdeaRow;
+  error?: string;
+}
+
+export interface GetIdeasResult {
+  success: boolean;
+  data?: ProjectIdeaRow[];
+  error?: string;
 }
 
 export function isStorageConfigured(): boolean {
-  const backend = getBackend();
-  if (backend === 'supabase') return isSupabaseConfigured();
   // MariaDB is considered configured if the backend is set to mariadb
   // (actual connectivity is checked at request time)
   return true;
 }
 
 export function getStorageLabel(): string {
-  return getBackend() === 'supabase' ? 'Cloud' : 'Database';
+  return 'Database';
 }
 
 export async function saveIdea(
@@ -30,19 +41,13 @@ export async function saveIdea(
   elaboration: IdeaElaboration,
   context?: BrainstormContext
 ): Promise<SaveIdeaResult> {
-  const backend = getBackend();
-  if (backend === 'supabase') return saveIdeaToCloud(idea, elaboration, context);
   return saveIdeaToMariaDB(idea, elaboration, context);
 }
 
 export async function getSavedIdeas(): Promise<GetIdeasResult> {
-  const backend = getBackend();
-  if (backend === 'supabase') return getSupabaseIdeas();
   return getSavedIdeasFromMariaDB();
 }
 
 export async function deleteIdea(id: string): Promise<SaveIdeaResult> {
-  const backend = getBackend();
-  if (backend === 'supabase') return deleteIdeaFromCloud(id);
   return deleteIdeaFromMariaDB(id);
 }
