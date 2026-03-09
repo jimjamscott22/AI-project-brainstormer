@@ -75,6 +75,8 @@ const BrainstormForm: React.FC<BrainstormFormProps> = ({ onSubmit, isLoading }) 
             <option value="automation">Automate my life</option>
             <option value="income">Side income</option>
             <option value="community">Community impact</option>
+            <option value="fun">Just for fun</option>
+            <option value="productivity">Boost productivity</option>
           </select>
         </div>
       </div>
