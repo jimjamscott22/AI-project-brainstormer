@@ -5,9 +5,21 @@ import IdeaDashboard from './components/IdeaDashboard';
 import SavedIdeasView from './components/SavedIdeasView';
 import LLMSidebar from './components/LLMSidebar';
 import ToastContainer, { type Toast } from './components/Toast';
-import type { BrainstormContext, BrainstormResult, Idea, IdeaElaboration } from './services/brainstormService';
+import type {
+  BrainstormContext,
+  BrainstormResult,
+  Idea,
+  IdeaElaboration,
+  PlanningAnswers,
+  ProjectPlan,
+} from './services/brainstormService';
 import type { LLMConfig } from './services/llmProviderService';
-import { generateIdeas, generateIdeaElaboration } from './services/brainstormService';
+import {
+  DEFAULT_PLANNING_ANSWERS,
+  generateIdeas,
+  generateIdeaElaboration,
+  generateProjectPlan,
+} from './services/brainstormService';
 import { exportToJSON, exportToMarkdown } from './services/exportService';
 import { saveIdea, isStorageConfigured, getStorageLabel } from './services/persistenceService';
 
@@ -21,6 +33,10 @@ function App() {
   const [isElaborating, setIsElaborating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [lastContext, setLastContext] = useState<BrainstormContext | null>(null);
+  const [planningAnswers, setPlanningAnswers] = useState<PlanningAnswers>(DEFAULT_PLANNING_ANSWERS);
+  const [projectPlan, setProjectPlan] = useState<ProjectPlan | null>(null);
+  const [isPlanning, setIsPlanning] = useState(false);
+  const [planSource, setPlanSource] = useState<'llm' | 'template' | null>(null);
   const [llmConfig, setLlmConfig] = useState<LLMConfig>({
     provider: null,
     model: null,
@@ -44,6 +60,9 @@ function App() {
     setIsLoading(true);
     setSelectedIdea(null);
     setElaboration(null);
+    setProjectPlan(null);
+    setPlanSource(null);
+    setPlanningAnswers(DEFAULT_PLANNING_ANSWERS);
     setLastContext(context);
     try {
       const data = await generateIdeas(context, llmConfig);
@@ -78,6 +97,8 @@ function App() {
     setSelectedIdea(idea);
     setIsElaborating(true);
     setElaboration(null);
+    setProjectPlan(null);
+    setPlanSource(null);
 
     if (!llmConfig.provider || !llmConfig.model) {
       addToast('info', 'No LLM selected — using template elaboration.', 4000);
@@ -96,6 +117,37 @@ function App() {
       addToast('error', 'Failed to elaborate on this idea. Please try again.', 5000);
     } finally {
       setIsElaborating(false);
+    }
+  };
+
+  const handleGeneratePlan = async () => {
+    if (!selectedIdea || !lastContext) {
+      addToast('error', 'Select an idea first so I can plan around it.', 4000);
+      return;
+    }
+
+    setIsPlanning(true);
+    setProjectPlan(null);
+    setPlanSource(null);
+
+    if (!llmConfig.provider || !llmConfig.model) {
+      addToast('info', 'No LLM selected — using template planning mode.', 4000);
+    }
+
+    try {
+      const result = await generateProjectPlan(lastContext, selectedIdea, planningAnswers, llmConfig);
+      setProjectPlan(result.plan);
+      setPlanSource(result.source);
+      if (result.source === 'llm') {
+        addToast('success', 'Generated a guided build plan.', 3000);
+      } else {
+        addToast('info', 'Generated a template build plan. Select an LLM for richer planning.', 5000);
+      }
+    } catch (error) {
+      console.error('Planning failed:', error);
+      addToast('error', 'Failed to generate a build plan. Please try again.', 5000);
+    } finally {
+      setIsPlanning(false);
     }
   };
 
@@ -183,7 +235,7 @@ function App() {
               Personal <span className="bg-clip-text text-transparent bg-gradient-to-r from-brand-primary to-brand-secondary">Project Ideas</span>
             </h1>
             <p className="text-slate-400 text-lg max-w-2xl mx-auto">
-              Turn your interests, skills, and time budget into buildable project ideas with local LLM guidance.
+              Turn your interests, stack preferences, and time budget into buildable project ideas and guided build plans with local LLM support.
             </p>
             
             {/* LLM Status Indicator */}
@@ -239,8 +291,8 @@ function App() {
               <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
                 {[
                   { icon: Brain, title: "Solo-Sized Scope", desc: "Ideas sized to your time and energy, not a whole team." },
-                  { icon: Sparkles, title: "Skill-Aligned", desc: "Mixes what you know with what you want to learn next." },
-                  { icon: Sparkles, title: "Constraint Smart", desc: "Respects your tools, budget, and personal schedule." }
+                  { icon: Sparkles, title: "Stack-Specific", desc: "Uses your preferred language, framework, platform, and data choices up front." },
+                  { icon: Sparkles, title: "Planning Ready", desc: "Turns a selected idea into a concrete build plan with milestones and descoping options." }
                 ].map((feature, i) => (
                   <div key={i} className="text-center p-4">
                     <div className="w-12 h-12 bg-slate-800 rounded-xl flex items-center justify-center mx-auto mb-4 text-brand-primary border border-slate-700">
@@ -258,8 +310,14 @@ function App() {
               ideas={result.ideas}
               selectedIdea={selectedIdea}
               elaboration={elaboration}
+              planningAnswers={planningAnswers}
+              projectPlan={projectPlan}
               isElaborating={isElaborating}
+              isPlanning={isPlanning}
+              planSource={planSource}
               onSelectIdea={handleSelectIdea}
+              onPlanningAnswersChange={setPlanningAnswers}
+              onGeneratePlan={handleGeneratePlan}
               onExportJSON={handleExportJSON}
               onExportMarkdown={handleExportMarkdown}
               onSave={handleSave}
@@ -270,6 +328,9 @@ function App() {
                 setResult(null);
                 setSelectedIdea(null);
                 setElaboration(null);
+                setProjectPlan(null);
+                setPlanSource(null);
+                setPlanningAnswers(DEFAULT_PLANNING_ANSWERS);
               }}
             />
           )}

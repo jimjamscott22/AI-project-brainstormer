@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import type { Idea, IdeaElaboration } from '../services/brainstormService';
-import { Zap, TrendingUp, ShieldCheck, Lightbulb, Download, FileText, Database } from 'lucide-react';
+import type { Idea, IdeaElaboration, PlanningAnswers, ProjectPlan } from '../services/brainstormService';
+import { Zap, TrendingUp, ShieldCheck, Lightbulb, Download, FileText, Database, Map, Bot, Layers3 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -88,8 +88,14 @@ interface IdeaDashboardProps {
   ideas: Idea[];
   selectedIdea: Idea | null;
   elaboration: IdeaElaboration | null;
+  planningAnswers: PlanningAnswers;
+  projectPlan: ProjectPlan | null;
   isElaborating: boolean;
+  isPlanning: boolean;
+  planSource: 'llm' | 'template' | null;
   onSelectIdea: (idea: Idea) => void;
+  onPlanningAnswersChange: (answers: PlanningAnswers) => void;
+  onGeneratePlan: () => void;
   onReset: () => void;
   onExportJSON?: () => void;
   onExportMarkdown?: () => void;
@@ -104,8 +110,14 @@ const IdeaDashboard: React.FC<IdeaDashboardProps> = ({
   ideas,
   selectedIdea,
   elaboration,
+  planningAnswers,
+  projectPlan,
   isElaborating,
+  isPlanning,
+  planSource,
   onSelectIdea,
+  onPlanningAnswersChange,
+  onGeneratePlan,
   onReset,
   onExportJSON,
   onExportMarkdown,
@@ -114,6 +126,16 @@ const IdeaDashboard: React.FC<IdeaDashboardProps> = ({
   isStorageConfigured = false,
   storageLabel = 'Database',
 }) => {
+  const inputClasses = "w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2 text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-primary/50 transition-all";
+  const selectLabelClasses = "block text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 mb-2";
+
+  const updatePlanningAnswer = <K extends keyof PlanningAnswers>(key: K, value: PlanningAnswers[K]) => {
+    onPlanningAnswersChange({
+      ...planningAnswers,
+      [key]: value,
+    });
+  };
+
   return (
     <div className="max-w-6xl mx-auto space-y-12 pb-20">
       <motion.div 
@@ -258,6 +280,200 @@ const IdeaDashboard: React.FC<IdeaDashboardProps> = ({
             </div>
           ) : (
             <p className="text-sm text-slate-400">Click the selected project again to fetch a structured outline.</p>
+          )}
+        </div>
+
+        <div className="mt-8 bg-slate-950/60 border border-slate-700/60 rounded-2xl p-6">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-6">
+            <div>
+              <h3 className="text-lg font-bold text-slate-100 flex items-center gap-2">
+                <Map size={18} className="text-brand-secondary" />
+                Planning Mode
+              </h3>
+              <p className="text-sm text-slate-400 mt-1">
+                Answer a few implementation questions, then generate a stack-specific build plan for the selected idea.
+              </p>
+            </div>
+            {planSource ? (
+              <div className={cn(
+                "inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold uppercase tracking-[0.2em]",
+                planSource === 'llm'
+                  ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
+                  : 'bg-amber-500/10 border border-amber-500/20 text-amber-400'
+              )}>
+                <Bot size={14} />
+                {planSource === 'llm' ? 'Local LLM Plan' : 'Template Plan'}
+              </div>
+            ) : null}
+          </div>
+
+          {!selectedIdea ? (
+            <p className="text-sm text-slate-400">Select an idea first, then use planning mode to turn it into a concrete build plan.</p>
+          ) : (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
+                <div>
+                  <label htmlFor="deploymentTarget" className={selectLabelClasses}>Deployment Target</label>
+                  <select
+                    id="deploymentTarget"
+                    className={inputClasses}
+                    value={planningAnswers.deploymentTarget}
+                    onChange={(event) => updatePlanningAnswer('deploymentTarget', event.target.value as PlanningAnswers['deploymentTarget'])}
+                  >
+                    <option value="local-first">Local-first</option>
+                    <option value="simple-web-deploy">Simple web deploy</option>
+                    <option value="desktop-distribution">Desktop distribution</option>
+                    <option value="mobile-app-store">Mobile app store</option>
+                    <option value="unsure">Unsure</option>
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="authRequirement" className={selectLabelClasses}>Auth Need</label>
+                  <select
+                    id="authRequirement"
+                    className={inputClasses}
+                    value={planningAnswers.authRequirement}
+                    onChange={(event) => updatePlanningAnswer('authRequirement', event.target.value as PlanningAnswers['authRequirement'])}
+                  >
+                    <option value="none">No auth</option>
+                    <option value="optional">Optional auth</option>
+                    <option value="required">Required auth</option>
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="collaborationMode" className={selectLabelClasses}>Audience</label>
+                  <select
+                    id="collaborationMode"
+                    className={inputClasses}
+                    value={planningAnswers.collaborationMode}
+                    onChange={(event) => updatePlanningAnswer('collaborationMode', event.target.value as PlanningAnswers['collaborationMode'])}
+                  >
+                    <option value="solo-only">Solo only</option>
+                    <option value="small-group">Small group</option>
+                    <option value="public-users">Public users</option>
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="deliveryBias" className={selectLabelClasses}>Delivery Bias</label>
+                  <select
+                    id="deliveryBias"
+                    className={inputClasses}
+                    value={planningAnswers.deliveryBias}
+                    onChange={(event) => updatePlanningAnswer('deliveryBias', event.target.value as PlanningAnswers['deliveryBias'])}
+                  >
+                    <option value="fastest-mvp">Fastest MVP</option>
+                    <option value="balanced">Balanced</option>
+                    <option value="portfolio-polish">Portfolio polish</option>
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="integrationNeeds" className={selectLabelClasses}>Integration Needs</label>
+                  <select
+                    id="integrationNeeds"
+                    className={inputClasses}
+                    value={planningAnswers.integrationNeeds}
+                    onChange={(event) => updatePlanningAnswer('integrationNeeds', event.target.value as PlanningAnswers['integrationNeeds'])}
+                  >
+                    <option value="none">None</option>
+                    <option value="light-integrations">Light integrations</option>
+                    <option value="api-heavy">API-heavy</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between gap-4 rounded-2xl border border-slate-800 bg-slate-900/40 px-4 py-3">
+                <p className="text-sm text-slate-400">
+                  Planning for <span className="text-slate-200 font-semibold">{selectedIdea.title}</span>.
+                </p>
+                <button
+                  type="button"
+                  onClick={onGeneratePlan}
+                  disabled={isPlanning}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-brand-primary to-brand-secondary rounded-lg hover:opacity-95 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isPlanning ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Planning...
+                    </>
+                  ) : (
+                    <>
+                      <Map size={16} />
+                      Generate Build Plan
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {projectPlan ? (
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 text-sm text-slate-300">
+                  <div className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900/30 p-5">
+                    <div>
+                      <p className="text-slate-100 font-semibold mb-1 flex items-center gap-2">
+                        <Layers3 size={16} className="text-brand-primary" />
+                        Recommended Stack
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {projectPlan.recommendedStack.map((item) => (
+                          <span key={item} className="px-2.5 py-1 rounded-full bg-slate-800 border border-slate-700 text-slate-200 text-xs font-medium">
+                            {item}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-slate-100 font-semibold mb-1">Why This Stack Fits</p>
+                      <p>{projectPlan.stackRationale}</p>
+                    </div>
+                    <div>
+                      <p className="text-slate-100 font-semibold mb-1">Architecture Summary</p>
+                      <p>{projectPlan.architectureSummary}</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900/30 p-5">
+                    <div>
+                      <p className="text-slate-100 font-semibold mb-1">Feature Phases</p>
+                      <ul className="list-disc list-inside space-y-1">
+                        {projectPlan.featurePhases.map((item) => <li key={item}>{item}</li>)}
+                      </ul>
+                    </div>
+                    <div>
+                      <p className="text-slate-100 font-semibold mb-1">Data Model</p>
+                      <ul className="list-disc list-inside space-y-1">
+                        {projectPlan.dataModel.map((item) => <li key={item}>{item}</li>)}
+                      </ul>
+                    </div>
+                    <div>
+                      <p className="text-slate-100 font-semibold mb-1">API Needs</p>
+                      <ul className="list-disc list-inside space-y-1">
+                        {projectPlan.apiNeeds.map((item) => <li key={item}>{item}</li>)}
+                      </ul>
+                    </div>
+                    <div>
+                      <p className="text-slate-100 font-semibold mb-1">Delivery Milestones</p>
+                      <ul className="list-disc list-inside space-y-1">
+                        {projectPlan.deliveryMilestones.map((item) => <li key={item}>{item}</li>)}
+                      </ul>
+                    </div>
+                    <div>
+                      <p className="text-slate-100 font-semibold mb-1">Risks</p>
+                      <ul className="list-disc list-inside space-y-1">
+                        {projectPlan.risks.map((item) => <li key={item}>{item}</li>)}
+                      </ul>
+                    </div>
+                    <div>
+                      <p className="text-slate-100 font-semibold mb-1">De-scope First If Needed</p>
+                      <ul className="list-disc list-inside space-y-1">
+                        {projectPlan.descopingOptions.map((item) => <li key={item}>{item}</li>)}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-slate-400">Use the planning questions above to generate a concrete stack, architecture, and milestone plan.</p>
+              )}
+            </div>
           )}
         </div>
       </div>
