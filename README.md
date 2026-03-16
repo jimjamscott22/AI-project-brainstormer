@@ -1,10 +1,11 @@
 # Personal Project Idea Generator
 
-Generate solo-friendly project ideas from your interests, skills, time budget, and constraints. The UI is built with React + Vite and currently uses a template-based generator you can swap for a local LLM.
+Generate solo-friendly project ideas from your interests, time budget, constraints, and explicit tech preferences. The UI is built with React + Vite and can use local LLMs for both idea generation and guided planning.
 
 ## What it does
-- Collects a short personal brief (interests, skills, time, goal, constraints).
-- Produces six scoped project ideas with effort and impact signals.
+- Collects a structured project brief: interests, goal, time budget, platform, language/framework preferences, backend expectations, and constraints.
+- Produces six scoped project ideas with effort and impact signals that match the selected stack direction.
+- Lets you answer follow-up planning questions and generate a concrete build plan for a chosen idea.
 - Keeps everything local by default.
 
 ## Features
@@ -21,8 +22,13 @@ Generate solo-friendly project ideas from your interests, skills, time budget, a
 
 - **Smart Fallback:**
   - Uses local LLM when available
-  - Falls back to template generator if LLM fails
+  - Falls back to stack-aware template generation if LLM fails
   - Error notifications with toast alerts
+
+- **Guided Planning Mode:**
+  - Asks follow-up implementation questions after you select an idea
+  - Produces recommended stack, architecture summary, milestones, risks, and descoping options
+  - Uses the same local LLM provider selection as idea generation, with template fallback when needed
 
 - **Responsive Sidebar:**
   - Collapsible LLM provider panel
@@ -45,9 +51,10 @@ npm run dev
 Open http://localhost:5173 in your browser (Vite default).
 
 ## Customize the generator
-- Update the template logic in `src/services/brainstormService.ts`.
-- Adjust fields and copy in `src/components/BrainstormForm.tsx` and `src/App.tsx`.
-- Replace the template generator with a local LLM call (Ollama, WebLLM, etc.) in `src/services/brainstormService.ts`.
+- Update the structured criteria, fallback templates, and planning prompts in `src/services/brainstormService.ts`.
+- Adjust intake fields in `src/components/BrainstormForm.tsx`.
+- Adjust UI copy and planning flow in `src/App.tsx` and `src/components/IdeaDashboard.tsx`.
+- Replace or extend the local model transport in `src/services/llmProviderService.ts`.
 
 ## Build and preview
 
@@ -91,10 +98,12 @@ In production, the browser will make direct requests to Ollama/LM Studio. You ha
 
 ### Environment Variables
 
-Create a `.env` file to customize LLM endpoints:
+Create a `.env` file to customize storage and LLM endpoints:
 
 ```bash
 # .env
+VITE_STORAGE_BACKEND=mariadb
+VITE_MARIADB_API_URL=/api
 VITE_OLLAMA_ENDPOINT=http://localhost:11434
 VITE_LMSTUDIO_ENDPOINT=http://localhost:1234
 ```
