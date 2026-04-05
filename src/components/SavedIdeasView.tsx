@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Lightbulb, Zap, TrendingUp, Trash2, ChevronDown, ChevronUp, RefreshCw, Database, Calendar } from 'lucide-react';
+import { Lightbulb, Zap, TrendingUp, Trash2, ChevronDown, ChevronUp, RefreshCw, Database, Calendar, Download, FileText } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import type { ProjectIdeaRow } from '../services/persistenceService';
-import type { IdeaElaboration } from '../services/brainstormService';
+import type { Idea, IdeaElaboration } from '../services/brainstormService';
 import { getSavedIdeas, deleteIdea } from '../services/persistenceService';
+import { exportToJSON, exportToMarkdown } from '../services/exportService';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -29,6 +30,17 @@ function formatDate(iso: string | null | undefined): string {
   const d = new Date(iso);
   if (isNaN(d.getTime())) return '\u2014';
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function projectIdeaRowToIdea(row: ProjectIdeaRow): Idea {
+  return {
+    id: row.id,
+    title: row.title,
+    description: row.description ?? '',
+    priority: row.priority ?? 'Medium',
+    effort: row.effort ?? 'Medium',
+    impact: row.impact ?? 'Medium',
+  };
 }
 
 interface SavedIdeasViewProps {
@@ -79,6 +91,34 @@ const SavedIdeasView: React.FC<SavedIdeasViewProps> = ({ onToast }) => {
   const toggleExpand = (id: string) => {
     setExpandedId((prev) => (prev === id ? null : id));
     setConfirmDeleteId(null);
+  };
+
+  const handleExportJSON = (row: ProjectIdeaRow) => {
+    if (!row.elaboration) {
+      onToast('error', 'This saved idea does not have enough detail to export.', 4000);
+      return;
+    }
+    try {
+      exportToJSON(projectIdeaRowToIdea(row), row.elaboration, row.context ?? undefined);
+      onToast('success', 'Exported idea as JSON file.', 3000);
+    } catch (err) {
+      console.error(err);
+      onToast('error', 'Failed to export idea.', 4000);
+    }
+  };
+
+  const handleExportMarkdown = (row: ProjectIdeaRow) => {
+    if (!row.elaboration) {
+      onToast('error', 'This saved idea does not have enough detail to export.', 4000);
+      return;
+    }
+    try {
+      exportToMarkdown(projectIdeaRowToIdea(row), row.elaboration, row.context ?? undefined);
+      onToast('success', 'Exported idea as Markdown file.', 3000);
+    } catch (err) {
+      console.error(err);
+      onToast('error', 'Failed to export idea.', 4000);
+    }
   };
 
   if (isLoading) {
@@ -212,12 +252,37 @@ const SavedIdeasView: React.FC<SavedIdeasViewProps> = ({ onToast }) => {
                         <p className="text-sm text-slate-500 pt-4">No elaboration saved for this idea.</p>
                       )}
 
-                      {/* Delete action */}
-                      <div className="pt-4 mt-4 border-t border-slate-700/50">
+                      {/* Export + delete */}
+                      <div className="pt-4 mt-4 border-t border-slate-700/50 space-y-4">
+                        <div className="flex flex-wrap gap-3">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleExportJSON(idea);
+                            }}
+                            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-200 bg-slate-700/50 hover:bg-slate-700 border border-slate-600/50 rounded-lg transition-colors"
+                          >
+                            <Download size={16} />
+                            Export JSON
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleExportMarkdown(idea);
+                            }}
+                            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-200 bg-slate-700/50 hover:bg-slate-700 border border-slate-600/50 rounded-lg transition-colors"
+                          >
+                            <FileText size={16} />
+                            Export Markdown
+                          </button>
+                        </div>
                         {confirmDeleteId === idea.id ? (
                           <div className="flex items-center gap-3">
                             <span className="text-sm text-slate-400">Delete this idea?</span>
                             <button
+                              type="button"
                               onClick={() => handleDelete(idea.id)}
                               disabled={deletingId === idea.id}
                               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 rounded-lg transition-colors disabled:opacity-50"
@@ -230,6 +295,7 @@ const SavedIdeasView: React.FC<SavedIdeasViewProps> = ({ onToast }) => {
                               Yes, delete
                             </button>
                             <button
+                              type="button"
                               onClick={() => setConfirmDeleteId(null)}
                               className="px-3 py-1.5 text-sm text-slate-400 hover:text-white transition-colors"
                             >
@@ -238,6 +304,7 @@ const SavedIdeasView: React.FC<SavedIdeasViewProps> = ({ onToast }) => {
                           </div>
                         ) : (
                           <button
+                            type="button"
                             onClick={(e) => {
                               e.stopPropagation();
                               setConfirmDeleteId(idea.id);
