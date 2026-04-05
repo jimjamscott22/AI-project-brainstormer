@@ -255,28 +255,45 @@ const SavedIdeasView: React.FC<SavedIdeasViewProps> = ({ onToast }) => {
                       {/* Export + delete */}
                       <div className="pt-4 mt-4 border-t border-slate-700/50 space-y-4">
                         <div className="flex flex-wrap gap-3">
+                          {(() => {
+                            const exportDisabled = !idea.elaboration;
+                            const disabledTitle = exportDisabled
+                              ? 'This saved idea does not have enough detail to export.'
+                              : undefined;
+
+                            return (
+                              <>
                           <button
                             type="button"
+                            disabled={exportDisabled}
+                            title={disabledTitle}
+                            aria-disabled={exportDisabled}
                             onClick={(e) => {
                               e.stopPropagation();
                               handleExportJSON(idea);
                             }}
-                            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-200 bg-slate-700/50 hover:bg-slate-700 border border-slate-600/50 rounded-lg transition-colors"
+                            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-200 bg-slate-700/50 hover:bg-slate-700 border border-slate-600/50 rounded-lg transition-colors disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-slate-700/50"
                           >
                             <Download size={16} />
                             Export JSON
                           </button>
                           <button
                             type="button"
+                            disabled={exportDisabled}
+                            title={disabledTitle}
+                            aria-disabled={exportDisabled}
                             onClick={(e) => {
                               e.stopPropagation();
                               handleExportMarkdown(idea);
                             }}
-                            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-200 bg-slate-700/50 hover:bg-slate-700 border border-slate-600/50 rounded-lg transition-colors"
+                            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-200 bg-slate-700/50 hover:bg-slate-700 border border-slate-600/50 rounded-lg transition-colors disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-slate-700/50"
                           >
                             <FileText size={16} />
                             Export Markdown
                           </button>
+                              </>
+                            );
+                          })()}
                         </div>
                         {confirmDeleteId === idea.id ? (
                           <div className="flex items-center gap-3">

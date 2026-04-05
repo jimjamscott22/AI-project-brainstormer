@@ -111,7 +111,7 @@ describe('SavedIdeasView export', () => {
     expect(onToast).toHaveBeenCalledWith('success', 'Exported idea as Markdown file.', 3000);
   });
 
-  it('shows a guard toast when elaboration is missing and does not call exporters', async () => {
+  it('disables export buttons when elaboration is missing', async () => {
     const user = userEvent.setup();
     vi.mocked(getSavedIdeas).mockResolvedValue({
       success: true,
@@ -140,91 +140,90 @@ describe('SavedIdeasView export', () => {
 
     await user.click(screen.getByRole('button', { name: /No Detail Idea/i }));
 
-    await user.click(screen.getByRole('button', { name: /Export JSON/i }));
-    await user.click(screen.getByRole('button', { name: /Export Markdown/i }));
+    const exportJsonButton = screen.getByRole('button', { name: /Export JSON/i });
+    const exportMarkdownButton = screen.getByRole('button', { name: /Export Markdown/i });
 
-    expect(onToast).toHaveBeenCalledWith(
-      'error',
-      'This saved idea does not have enough detail to export.',
-      4000
-    );
-    expect(onToast).toHaveBeenCalledTimes(2);
+    expect(exportJsonButton).toBeDisabled();
+    expect(exportMarkdownButton).toBeDisabled();
+
+    await user.click(exportJsonButton);
+    await user.click(exportMarkdownButton);
+
+    expect(onToast).not.toHaveBeenCalled();
     expect(exportToJSON).not.toHaveBeenCalled();
     expect(exportToMarkdown).not.toHaveBeenCalled();
   });
 
   it('shows an error toast when Export JSON fails because the exporter throws', async () => {
     const user = userEvent.setup();
-    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const onToast = vi.fn();
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    vi.mocked(getSavedIdeas).mockResolvedValue({
+      success: true,
+      data: [
+        {
+          id: 'row-3',
+          title: 'JSON Throw Project',
+          description: 'Throws on JSON export',
+          priority: 'High',
+          effort: 'Medium',
+          impact: 'High',
+          elaboration,
+          context,
+          created_at: '2026-01-01T00:00:00.000Z',
+          updated_at: '2026-01-01T00:00:00.000Z',
+        },
+      ],
+    });
+    vi.mocked(exportToJSON).mockImplementation(() => {
+      throw new Error('JSON export failed');
+    });
 
     try {
-      vi.mocked(getSavedIdeas).mockResolvedValue({
-        success: true,
-        data: [
-          {
-            id: 'row-throw',
-            title: 'Throwy Project',
-            description: 'Desc',
-            priority: 'Medium',
-            effort: 'Medium',
-            impact: 'Medium',
-            elaboration,
-            context: null,
-            created_at: '2026-01-01T00:00:00.000Z',
-            updated_at: '2026-01-01T00:00:00.000Z',
-          },
-        ],
-      });
-
-      vi.mocked(exportToJSON).mockImplementation(() => {
-        throw new Error('download failed');
-      });
-
-      const onToast = vi.fn();
       render(<SavedIdeasView onToast={onToast} />);
 
       await waitFor(() => {
         expect(screen.queryByText(/Loading saved ideas/i)).not.toBeInTheDocument();
       });
 
-      await user.click(screen.getByRole('button', { name: /Throwy Project/i }));
+      await user.click(screen.getByRole('button', { name: /JSON Throw Project/i }));
       await user.click(screen.getByRole('button', { name: /Export JSON/i }));
 
       expect(onToast).toHaveBeenCalledWith('error', 'Failed to export idea.', 4000);
-      expect(consoleError).toHaveBeenCalled();
+      expect(consoleErrorSpy).toHaveBeenCalled();
     } finally {
-      consoleError.mockRestore();
+      consoleErrorSpy.mockRestore();
     }
   });
 
   it('shows an error toast when Export Markdown fails because the exporter throws', async () => {
     const user = userEvent.setup();
-    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const onToast = vi.fn();
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    vi.mocked(getSavedIdeas).mockResolvedValue({
+      success: true,
+      data: [
+        {
+          id: 'row-4',
+          title: 'Markdown Throw Project',
+          description: 'Throws on Markdown export',
+          priority: 'High',
+          effort: 'Medium',
+          impact: 'High',
+          elaboration,
+          context,
+          created_at: '2026-01-01T00:00:00.000Z',
+          updated_at: '2026-01-01T00:00:00.000Z',
+        },
+      ],
+    });
+    vi.mocked(exportToMarkdown).mockImplementation(() => {
+      throw new Error('Markdown export failed');
+    });
 
     try {
-      vi.mocked(getSavedIdeas).mockResolvedValue({
-        success: true,
-        data: [
-          {
-            id: 'row-md-throw',
-            title: 'Markdown Throw Project',
-            description: 'Desc',
-            priority: 'Medium',
-            effort: 'Medium',
-            impact: 'Medium',
-            elaboration,
-            context: null,
-            created_at: '2026-01-01T00:00:00.000Z',
-            updated_at: '2026-01-01T00:00:00.000Z',
-          },
-        ],
-      });
-
-      vi.mocked(exportToMarkdown).mockImplementation(() => {
-        throw new Error('markdown export failed');
-      });
-
-      const onToast = vi.fn();
       render(<SavedIdeasView onToast={onToast} />);
 
       await waitFor(() => {
@@ -235,9 +234,9 @@ describe('SavedIdeasView export', () => {
       await user.click(screen.getByRole('button', { name: /Export Markdown/i }));
 
       expect(onToast).toHaveBeenCalledWith('error', 'Failed to export idea.', 4000);
-      expect(consoleError).toHaveBeenCalled();
+      expect(consoleErrorSpy).toHaveBeenCalled();
     } finally {
-      consoleError.mockRestore();
+      consoleErrorSpy.mockRestore();
     }
   });
 });
