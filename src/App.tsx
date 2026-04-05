@@ -20,7 +20,12 @@ import {
   generateIdeaElaboration,
   generateProjectPlan,
 } from './services/brainstormService';
-import { exportToJSON, exportToMarkdown } from './services/exportService';
+import {
+  exportBuildPlanToJSON,
+  exportBuildPlanToMarkdown,
+  exportToJSON,
+  exportToMarkdown,
+} from './services/exportService';
 import { saveIdea, isStorageConfigured, getStorageLabel } from './services/persistenceService';
 
 type AppView = 'generate' | 'saved';
@@ -179,6 +184,34 @@ function App() {
     }
   };
 
+  const handleExportBuildPlanJSON = () => {
+    if (!selectedIdea || !projectPlan) {
+      addToast('error', 'Please generate a build plan first.', 4000);
+      return;
+    }
+    try {
+      exportBuildPlanToJSON(selectedIdea, projectPlan, planningAnswers, lastContext ?? undefined);
+      addToast('success', 'Exported build plan as JSON file.', 3000);
+    } catch (error) {
+      console.error('Build plan export failed:', error);
+      addToast('error', 'Failed to export build plan.', 4000);
+    }
+  };
+
+  const handleExportBuildPlanMarkdown = () => {
+    if (!selectedIdea || !projectPlan) {
+      addToast('error', 'Please generate a build plan first.', 4000);
+      return;
+    }
+    try {
+      exportBuildPlanToMarkdown(selectedIdea, projectPlan, planningAnswers, lastContext ?? undefined);
+      addToast('success', 'Exported build plan as Markdown file.', 3000);
+    } catch (error) {
+      console.error('Build plan export failed:', error);
+      addToast('error', 'Failed to export build plan.', 4000);
+    }
+  };
+
   const handleSave = async () => {
     if (!selectedIdea || !elaboration) {
       addToast('error', 'Please select an idea and wait for elaboration first.', 4000);
@@ -320,6 +353,8 @@ function App() {
               onGeneratePlan={handleGeneratePlan}
               onExportJSON={handleExportJSON}
               onExportMarkdown={handleExportMarkdown}
+              onExportBuildPlanJSON={handleExportBuildPlanJSON}
+              onExportBuildPlanMarkdown={handleExportBuildPlanMarkdown}
               onSave={handleSave}
               isSaving={isSaving}
               isStorageConfigured={isStorageConfigured()}

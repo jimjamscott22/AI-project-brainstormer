@@ -99,6 +99,8 @@ interface IdeaDashboardProps {
   onReset: () => void;
   onExportJSON?: () => void;
   onExportMarkdown?: () => void;
+  onExportBuildPlanJSON?: () => void;
+  onExportBuildPlanMarkdown?: () => void;
   onSave?: () => void;
   isSaving?: boolean;
   isStorageConfigured?: boolean;
@@ -121,6 +123,8 @@ const IdeaDashboard: React.FC<IdeaDashboardProps> = ({
   onReset,
   onExportJSON,
   onExportMarkdown,
+  onExportBuildPlanJSON,
+  onExportBuildPlanMarkdown,
   onSave,
   isSaving = false,
   isStorageConfigured = false,
@@ -468,6 +472,22 @@ const IdeaDashboard: React.FC<IdeaDashboardProps> = ({
                         {projectPlan.descopingOptions.map((item) => <li key={item}>{item}</li>)}
                       </ul>
                     </div>
+                  </div>
+                  <div className="xl:col-span-2 flex flex-wrap gap-3 rounded-2xl border border-slate-800 bg-slate-900/30 p-5">
+                    <button
+                      onClick={onExportBuildPlanJSON}
+                      className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-200 bg-slate-700/50 hover:bg-slate-700 border border-slate-600/50 rounded-lg transition-colors"
+                    >
+                      <Download size={16} />
+                      Export Build Plan JSON
+                    </button>
+                    <button
+                      onClick={onExportBuildPlanMarkdown}
+                      className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-200 bg-slate-700/50 hover:bg-slate-700 border border-slate-600/50 rounded-lg transition-colors"
+                    >
+                      <FileText size={16} />
+                      Export Build Plan Markdown
+                    </button>
                   </div>
                 </div>
               ) : (
